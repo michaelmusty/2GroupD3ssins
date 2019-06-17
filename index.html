@@ -1,129 +1,71 @@
 <!DOCTYPE html>
-<h1>First html document</h1>
-
-<!-- Add a bit of text -->
-<p>This is my first sentence</p>
-
-<!-- Add a svg shape. Note that the 'target' class is attributed to the circle -->
-<svg> 
-  <circle class="target" style="fill: #69b3a2" stroke="black" cx=50 cy=50 r=40></circle>
-</svg>
-
-<!-- Add a svg area, empty -->
-<svg id="viz_area" height=200 width=450></svg>
-
-<svg id="dataviz_area" height=200 width=450></svg>
-
-<!-- Add a svg area, empty -->
-<svg id="Viz_area" height=200 width=450></svg>
-
-<div id="scatter_area"></div>
+<meta charset="utf-8">
 
 <!-- Load d3.js -->
 <script src="https://d3js.org/d3.v4.js"></script>
 
+<!-- Create a div where the graph will take place -->
+<div id="my_dataviz"></div>
 
 <script>
 
 // set the dimensions and margins of the graph
-var margin = {top: 10, right: 40, bottom: 30, left: 30},
-    width = 450 - margin.left - margin.right,
-    height = 400 - margin.top - margin.bottom;
+var margin = {top: 10, right: 30, bottom: 30, left: 40},
+  width = 400 - margin.left - margin.right,
+  height = 400 - margin.top - margin.bottom;
 
 // append the svg object to the body of the page
-var svG = d3.select("#scatter_area")
-  .append("svg")
-    .attr("width", width + margin.left + margin.right)
-    .attr("height", height + margin.top + margin.bottom)
-  .append("g")
-    .attr("transform",
-          "translate(" + margin.left + "," + margin.top + ")");
+var svg = d3.select("#my_dataviz")
+.append("svg")
+  .attr("width", width + margin.left + margin.right)
+  .attr("height", height + margin.top + margin.bottom)
+.append("g")
+  .attr("transform",
+        "translate(" + margin.left + "," + margin.top + ")");
 
-// Create data
-var data = [ {x:10, y:20}, {x:40, y:90}, {x:80, y:50} ]
+d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/data_network.json", function( data) {
 
-// X scale and Axis
-var x = d3.scaleLinear()
-    .domain([0, 100])         // This is the min and the max of the data: 0 to 100 if percentages
-    .range([0, width]);       // This is the corresponding value I want in Pixel
-svG
-  .append('g')
-  .attr("transform", "translate(0," + height + ")")
-  .call(d3.axisBottom(x));
+  // Initialize the links
+  var link = svg
+    .selectAll("line")
+    .data(data.links)
+    .enter()
+    .append("line")
+      .style("stroke", "#aaa")
 
-// X scale and Axis
-var y = d3.scaleLinear()
-    .domain([0, 100])         // This is the min and the max of the data: 0 to 100 if percentages
-    .range([height, 0]);       // This is the corresponding value I want in Pixel
-svG
-  .append('g')
-  .call(d3.axisLeft(y));
+  // Initialize the nodes
+  var node = svg
+    .selectAll("circle")
+    .data(data.nodes)
+    .enter()
+    .append("circle")
+      .attr("r", 20)
+      .style("fill", "#69b3a2")
 
-// Add 3 dots for 0, 50 and 100%
-svG
-  .selectAll("whatever")
-  .data(data)
-  .enter()
-  .append("circle")
-    .attr("cx", function(d){ return x(d.x) })
-    .attr("cy", function(d){ return y(d.y) })
-    .attr("r", 7)
+  // Let's list the force we wanna apply on the network
+  var simulation = d3.forceSimulation(data.nodes)                 // Force algorithm is applied to data.nodes
+      .force("link", d3.forceLink()                               // This force provides links between nodes
+            .id(function(d) { return d.id; })                     // This provide  the id of a node
+            .links(data.links)                                    // and this the list of links
+      )
+      .force("charge", d3.forceManyBody().strength(-400))         // This adds repulsion between nodes. Play with the -400 for the repulsion strength
+      .force("center", d3.forceCenter(width / 2, height / 2))     // This force attracts nodes to the center of the svg area
+      .on("end", ticked);
+
+  // This function is run at each iteration of the force algorithm, updating the nodes position.
+  function ticked() {
+    link
+        .attr("x1", function(d) { return d.source.x; })
+        .attr("y1", function(d) { return d.source.y; })
+        .attr("x2", function(d) { return d.target.x; })
+        .attr("y2", function(d) { return d.target.y; });
+
+    node
+         .attr("cx", function (d) { return d.x+6; })
+         .attr("cy", function(d) { return d.y-6; });
+  }
+
+});
 
 
-</script>
-
-<script>
-// Select the svg area
-var svg = d3.select("#Viz_area")
-
-// Create a scale: transform value in pixel
-var x = d3.scaleLinear()
-    .domain([0, 100])         // This is the min and the max of the data: 0 to 100 if percentages
-    .range([0, 400]);       // This is the corresponding value I want in Pixel
-
-// Show the axis that corresponds to this scale
-svg.call(d3.axisBottom(x));
-
-// Add 3 dots for 0, 50 and 100%
-svg.append("circle")
-  .attr("cx", x(10)).attr("cy", 100).attr("r", 40).style("fill", "blue");
-svg.append("circle")
-  .attr("cx", x(50)).attr("cy", 100).attr("r", 40).style("fill", "red");
-svg.append("circle")
-  .attr("cx", x(100)).attr("cy", 100).attr("r", 40).style("fill", "green");
-</script>
-
-<script>
-// Select the svg area
-var svg = d3.select("#viz_area")
-
-// Create a scale: transform value in pixel
-var x = d3.scaleLinear()
-    .domain([0, 100])         // This is the min and the max of the data: 0 to 100 if percentages
-    .range([0, 400]);       // This is the corresponding value I want in Pixel
-// Try console.log( x(25) ) to see what this x function does.
-
-// Add 3 dots for 0, 50 and 100%
-svg.append("circle")
-  .attr("cx", x(10)).attr("cy", 100).attr("r", 40).style("fill", "blue");
-svg.append("circle")
-  .attr("cx", x(50)).attr("cy", 100).attr("r", 40).style("fill", "red");
-svg.append("circle")
-  .attr("cx", x(100)).attr("cy", 100).attr("r", 40).style("fill", "green");
-</script>
-
-<script>
-d3
-  .select(".target")  // select the elements that have the class 'target'
-  .style("stroke-width", 8) // change their style: stroke width is not equal to 8 pixels
-</script>
-
-<script>
-var svg = d3.select("#dataviz_area")
-svg.append("circle")
-  .attr("cx", 2).attr("cy", 2).attr("r", 40).style("fill", "blue");
-svg.append("circle")
-  .attr("cx", 140).attr("cy", 70).attr("r", 40).style("fill", "red");
-svg.append("circle")
-  .attr("cx", 300).attr("cy", 100).attr("r", 40).style("fill", "green");
 </script>
